@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>用户管理</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container mt-4">
+        <h2>用户管理</h2>
+        <form id="addUserForm" class="row g-3 mb-4">
+            <div class="col-md-2">
+                <input type="text" class="form-control" name="name" placeholder="姓名" required>
+            </div>
+            <div class="col-md-2">
+                <input type="text" class="form-control" name="username" placeholder="用户名" required>
+            </div>
+            <div class="col-md-2">
+                <input type="password" class="form-control" name="password" placeholder="密码" required>
+            </div>
+            <div class="col-md-2">
+                <input type="date" class="form-control" name="birthdate" placeholder="出生日期" required>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="gender" required>
+                    <option value="M">男</option>
+                    <option value="F">女</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">添加用户</button>
+            </div>
+        </form>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>姓名</th>
+                    <th>用户名</th>
+                    <th>出生日期</th>
+                    <th>性别</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="user : ${users}">
+                    <td th:text="${user.id}"></td>
+                    <td th:text="${user.name}"></td>
+                    <td th:text="${user.username}"></td>
+                    <td th:text="${user.birthdate}"></td>
+                    <td th:text="${user.gender}"></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-warning me-1"
+                            th:attr="data-id=${user.id},data-name=${user.name},data-username=${user.username},data-birthdate=${user.birthdate},data-gender=${user.gender}"
+                            onclick="openEditModal(this)">编辑</button>
+                        <a th:href="@{'/api/users/' + ${user.id}}" class="btn btn-sm btn-danger"
+                            onclick="return confirm('确定删除？')">删除</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <!-- 编辑用户框 -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="editUserForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editUserModalLabel">编辑用户</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="editUserId">
+                        <div class="mb-3">
+                            <label class="form-label">姓名</label>
+                            <input type="text" class="form-control" name="name" id="editUserName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">用户名</label>
+                            <input type="text" class="form-control" name="username" id="editUserUsername" required
+                                readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">出生日期</label>
+                            <input type="date" class="form-control" name="birthdate" id="editUserBirthdate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">性别</label>
+                            <select class="form-select" name="gender" id="editUserGender" required>
+                                <option value="M">男</option>
+                                <option value="F">女</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('addUserForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = {
+                name: form.name.value,
+                username: form.username.value,
+                password: form.password.value,
+                birthdate: form.birthdate.value,
+                gender: form.gender.value
+            };
+            const resp = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            let result = {};
+            const contentType = resp.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                result = await resp.json();
+            }
+
+            if (resp.ok) {
+                alert('用户添加成功');
+                location.reload();
+            } else {
+                alert(result.message || '添加失败');
+            }
+        });
+
+        // 打开编辑用户框并填充数据
+        window.openEditModal = function (btn) {
+            document.getElementById('editUserId').value = btn.dataset.id;
+            document.getElementById('editUserName').value = btn.dataset.name;
+            document.getElementById('editUserUsername').value = btn.dataset.username;
+            document.getElementById('editUserBirthdate').value = btn.dataset.birthdate;
+            document.getElementById('editUserGender').value = btn.dataset.gender;
+            var modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+        }
+
+        // 编辑用户表单提交
+        document.getElementById('editUserForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const data = {
+                name: document.getElementById('editUserName').value,
+                birthdate: document.getElementById('editUserBirthdate').value,
+                gender: document.getElementById('editUserGender').value
+            };
+            const resp = await fetch('/api/users/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            let result = {};
+            const contentType = resp.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                result = await resp.json();
+            }
+
+            if (resp.ok) {
+                alert('用户信息已更新');
+                location.reload();
+            } else {
+                alert(result.message || '更新失败');
+            }
+        });
+    </script>
+</body>
+
+</html>
